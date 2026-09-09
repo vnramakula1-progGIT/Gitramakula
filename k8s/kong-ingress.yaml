@@ -1,0 +1,312 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: kong-ingress
+  namespace: app-namespace
+  labels:
+    app: kong
+    tier: gateway
+  annotations:
+    kubernetes.io/ingress.class: "kong"
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    konghq.com/https-redirect-status-code: "301"
+    konghq.com/preserve-host: "true"
+spec:
+  tls:
+  - hosts:
+    - api.example.com
+    - gateway.example.com
+    - admin.example.com
+    secretName: kong-tls-secret
+  rules:
+  # Main API Gateway
+  - host: api.example.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: kong-proxy
+            port:
+              number: 80
+      - path: /health
+        pathType: Prefix
+        backend:
+          service:
+            name: kong-proxy
+            port:
+              number: 8001
+  # Gateway Endpoint
+  - host: gateway.example.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: kong-proxy
+            port:
+              number: 80
+  # Admin Endpoint
+  - host: admin.example.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: kong-admin
+            port:
+              number: 8001
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kong-proxy
+  namespace: app-namespace
+  labels:
+    app: kong
+    tier: gateway
+spec:
+  type: LoadBalancer
+  selector:
+    app: kong
+  ports:
+  - name: http
+    port: 80
+    targetPort: 8000
+    protocol: TCP
+  - name: https
+    port: 443
+    targetPort: 8443
+    protocol: TCP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kong-admin
+  namespace: app-namespace
+  labels:
+    app: kong
+    tier: gateway
+spec:
+  type: ClusterIP
+  selector:
+    app: kong
+  ports:
+  - name: admin-api
+    port: 8001
+    targetPort: 8001
+    protocol: TCP
+  - name: admin-ssl
+    port: 8444
+    targetPort: 8444
+    protocol: TCP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kong-cluster
+  namespace: app-namespace
+  labels:
+    app: kong
+    tier: gateway
+spec:
+  clusterIP: None
+  selector:
+    app: kong
+  ports:
+  - name: cluster
+    port: 8005
+    targetPort: 8005
+    protocol: TCP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kong-deployment
+  namespace: app-namespace
+  labels:
+    app: kong
+    tier: gateway
+spec:
+  replicas: 3
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: kong
+  template:
+    metadata:
+      labels:
+        app: kong
+        tier: gateway
+    spec:
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                  - kong
+              topologyKey: kubernetes.io/hostname
+      serviceAccountName: kong
+      containers:
+      - name: kong
+        image: kong:3.4-alpine
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 8000
+          name: proxy
+          protocol: TCP
+        - containerPort: 8443
+          name: proxy-ssl
+          protocol: TCP
+        - containerPort: 8001
+          name: admin
+          protocol: TCP
+        - containerPort: 8444
+          name: admin-ssl
+          protocol: TCP
+        - containerPort: 8005
+          name: cluster
+          protocol: TCP
+        env:
+        - name: KONG_DATABASE
+          value: "postgres"
+        - name: KONG_PG_HOST
+          value: "postgres-service"
+        - name: KONG_PG_PORT
+          value: "5432"
+        - name: KONG_PG_USER
+          valueFrom:
+            secretKeyRef:
+              name: kong-db-secret
+              key: username
+        - name: KONG_PG_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: kong-db-secret
+              key: password
+        - name: KONG_ADMIN_ACCESS_LOG
+          value: "/dev/stdout"
+        - name: KONG_ADMIN_ERROR_LOG
+          value: "/dev/stderr"
+        - name: KONG_PROXY_ACCESS_LOG
+          value: "/dev/stdout"
+        - name: KONG_PROXY_ERROR_LOG
+          value: "/dev/stderr"
+        - name: KONG_LOG_LEVEL
+          value: "info"
+        - name: KONG_CLUSTER_LISTEN
+          value: "0.0.0.0:8005"
+        - name: KONG_CLUSTER_CONTROL_PLANE
+          value: "kong-cluster:8005"
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /status
+            port: 8001
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /status
+            port: 8001
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+      terminationGracePeriodSeconds: 30
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kong-config
+  namespace: app-namespace
+  labels:
+    app: kong
+data:
+  kong.conf: |
+    # Kong Configuration
+    proxy_listen = 0.0.0.0:8000, 0.0.0.0:8443 ssl http2
+    admin_listen = 0.0.0.0:8001, 0.0.0.0:8444 ssl
+    database = postgres
+    pg_host = postgres-service
+    pg_port = 5432
+    pg_timeout = 5000
+    log_level = info
+    proxy_access_log = /dev/stdout
+    proxy_error_log = /dev/stderr
+    admin_access_log = /dev/stdout
+    admin_error_log = /dev/stderr
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: kong-db-secret
+  namespace: app-namespace
+  labels:
+    app: kong
+type: Opaque
+data:
+  username: a29uZ191c2Vy  # kong_user
+  password: a29uZ19wYXNzd29yZA==  # kong_password
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: kong
+  namespace: app-namespace
+  labels:
+    app: kong
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: kong
+rules:
+- apiGroups: [""]
+  resources: ["services"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: [""]
+  resources: ["endpoints"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: [""]
+  resources: ["configmaps"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: [""]
+  resources: ["secrets"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["networking.k8s.io"]
+  resources: ["ingresses"]
+  verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: kong
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: kong
+subjects:
+- kind: ServiceAccount
+  name: kong
+  namespace: app-namespace

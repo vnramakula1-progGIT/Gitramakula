@@ -1,0 +1,13 @@
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: app-pdb
+  namespace: app-namespace
+  labels:
+    app: gitramakula
+spec:
+  minAvailable: 2
+  selector:
+    matchLabels:
+      app: gitramakula
+  unhealthyPodEvictionPolicy: IfHealthyBudget
