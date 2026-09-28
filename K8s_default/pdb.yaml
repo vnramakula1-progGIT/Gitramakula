@@ -2,7 +2,7 @@ apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
   name: app-pdb
-  namespace: app-namespace
+  namespace: default
   labels:
     app: gitramakula
 spec:

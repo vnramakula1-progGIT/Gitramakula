@@ -7,10 +7,10 @@ metadata:
   name: gitramakula-app
 
 labels:
-- pairs:
-    managed-by: kustomize
-  includeSelectors: false
+- includeSelectors: false
   includeTemplates: true
+  pairs:
+    managed-by: kustomize
 
 resources:
 - namespace.yaml
@@ -35,11 +35,3 @@ images:
 - name: nginx
   newTag: latest
 
-vars:
-- name: APP_NAME
-  objref:
-    kind: Deployment
-    name: app-deployment
-    apiVersion: apps/v1
-  fieldref:
-    fieldpath: metadata.name

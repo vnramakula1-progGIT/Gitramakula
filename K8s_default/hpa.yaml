@@ -2,7 +2,7 @@ apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
   name: app-hpa
-  namespace: app-namespace
+  namespace: default
   labels:
     app: gitramakula
 spec:

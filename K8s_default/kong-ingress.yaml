@@ -131,15 +131,16 @@ metadata:
     app: kong
     tier: gateway
 spec:
-  replicas: 3
+  replicas: 1
   strategy:
     type: RollingUpdate
     rollingUpdate:
-      maxSurge: 1
-      maxUnavailable: 0
+      maxSurge: 0
+      maxUnavailable: 1
   selector:
     matchLabels:
       app: kong
+      managed-by: kustomize
   template:
     metadata:
       labels:
@@ -242,11 +243,11 @@ spec:
           value: "kong-cluster:8005"
         resources:
           requests:
-            memory: "256Mi"
-            cpu: "250m"
+            memory: "250Mi"
+            cpu: "150m"
           limits:
-            memory: "512Mi"
-            cpu: "500m"
+            memory: "300Mi"
+            cpu: "200m"
         livenessProbe:
           httpGet:
             path: /status

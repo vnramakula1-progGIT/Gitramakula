@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: StatefulSet
 metadata:
   name: rabbitmq-statefulset
-  namespace: app-namespace
+  namespace: default
   labels:
     app: rabbitmq
     tier: messaging
@@ -115,7 +115,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: rabbitmq-headless
-  namespace: app-namespace
+  namespace: default
   labels:
     app: rabbitmq
 spec:
@@ -138,7 +138,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: rabbitmq-service
-  namespace: app-namespace
+  namespace: default
   labels:
     app: rabbitmq
 spec:
@@ -157,7 +157,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: rabbitmq-service-lb
-  namespace: app-namespace
+  namespace: default
   labels:
     app: rabbitmq
 spec:
@@ -173,7 +173,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: rabbitmq-config
-  namespace: app-namespace
+  namespace: default
   labels:
     app: rabbitmq
 data:
@@ -186,7 +186,7 @@ apiVersion: v1
 kind: Secret
 metadata:
   name: rabbitmq-secret
-  namespace: app-namespace
+  namespace: default
   labels:
     app: rabbitmq
 type: Opaque
@@ -199,7 +199,7 @@ apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: rabbitmq
-  namespace: app-namespace
+  namespace: default
   labels:
     app: rabbitmq
 ---
@@ -207,7 +207,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
   name: rabbitmq
-  namespace: app-namespace
+  namespace: default
 rules:
 - apiGroups: [""]
   resources: ["endpoints"]
@@ -220,7 +220,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
   name: rabbitmq
-  namespace: app-namespace
+  namespace: default
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
@@ -228,4 +228,4 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: rabbitmq
-  namespace: app-namespace
+  namespace: default

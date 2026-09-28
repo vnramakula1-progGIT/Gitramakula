@@ -131,15 +131,16 @@ metadata:
     app: kong
     tier: gateway
 spec:
-  replicas: 3
+  replicas: 1
   strategy:
     type: RollingUpdate
     rollingUpdate:
-      maxSurge: 1
-      maxUnavailable: 0
+      maxSurge: 0
+      maxUnavailable: 1
   selector:
     matchLabels:
       app: kong
+      managed-by: kustomize
   template:
     metadata:
       labels:
@@ -159,9 +160,37 @@ spec:
                   - kong
               topologyKey: kubernetes.io/hostname
       serviceAccountName: kong
+      initContainers:
+      - name: kong-migrations
+        image: kong:3.4.2
+        command:
+        - /bin/sh
+        - -c
+        - |
+          until kong migrations bootstrap; do
+            kong migrations up && exit 0
+            sleep 5
+          done
+        env:
+        - name: KONG_DATABASE
+          value: "postgres"
+        - name: KONG_PG_HOST
+          value: "postgres-service.default.svc.cluster.local"
+        - name: KONG_PG_PORT
+          value: "5432"
+        - name: KONG_PG_USER
+          valueFrom:
+            secretKeyRef:
+              name: kong-db-secret
+              key: username
+        - name: KONG_PG_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: kong-db-secret
+              key: password
       containers:
       - name: kong
-        image: kong:3.4-alpine
+        image: kong:3.4.2
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 8000
@@ -183,7 +212,7 @@ spec:
         - name: KONG_DATABASE
           value: "postgres"
         - name: KONG_PG_HOST
-          value: "postgres-service"
+          value: "postgres-service.default.svc.cluster.local"
         - name: KONG_PG_PORT
           value: "5432"
         - name: KONG_PG_USER
@@ -196,6 +225,8 @@ spec:
             secretKeyRef:
               name: kong-db-secret
               key: password
+        - name: KONG_ADMIN_LISTEN
+          value: "0.0.0.0:8001, 0.0.0.0:8444 ssl"
         - name: KONG_ADMIN_ACCESS_LOG
           value: "/dev/stdout"
         - name: KONG_ADMIN_ERROR_LOG
@@ -248,7 +279,7 @@ data:
     proxy_listen = 0.0.0.0:8000, 0.0.0.0:8443 ssl http2
     admin_listen = 0.0.0.0:8001, 0.0.0.0:8444 ssl
     database = postgres
-    pg_host = postgres-service
+    pg_host = postgres-service.default.svc.cluster.local
     pg_port = 5432
     pg_timeout = 5000
     log_level = info

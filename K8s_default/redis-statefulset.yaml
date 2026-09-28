@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: StatefulSet
 metadata:
   name: redis-statefulset
-  namespace: app-namespace
+  namespace: default
   labels:
     app: redis
     tier: cache
@@ -106,7 +106,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: redis-headless
-  namespace: app-namespace
+  namespace: default
   labels:
     app: redis
 spec:
@@ -123,7 +123,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: redis-service
-  namespace: app-namespace
+  namespace: default
   labels:
     app: redis
 spec:
@@ -139,7 +139,7 @@ apiVersion: v1
 kind: Secret
 metadata:
   name: redis-secret
-  namespace: app-namespace
+  namespace: default
   labels:
     app: redis
 type: Opaque

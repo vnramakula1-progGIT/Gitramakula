@@ -22,11 +22,8 @@ This directory contains Kubernetes manifests and configurations for deploying th
 To deploy the application to Kubernetes:
 
 ```bash
-# Create namespace
-kubectl apply -f k8s/namespace.yaml
-
 # Build and apply the Kustomize configuration
-kubectl apply -k k8s/
+kubectl apply -k .
 
 # Verify deployment
 kubectl get deployments -n default
@@ -43,7 +40,7 @@ kubectl delete -k k8s/
 
 ## Components
 
-This configuration is sized for a single-node development cluster. Add node capacity and increase replica counts before using it for high availability.
+This configuration uses one replica per workload for a small, single-node development cluster. Add node capacity and increase replica counts before using it for high availability.
 
 ### Redis StatefulSet
 - 1 replica with persistent storage
