@@ -12,3 +12,7 @@ spec:
   destination:
     server: https://kubernetes.default.svc
     namespace: aks402ns
+  syncPolicy:
+    automated:
+      enabled: true
+      prune: false
