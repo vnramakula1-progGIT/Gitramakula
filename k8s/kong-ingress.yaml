@@ -175,7 +175,7 @@ spec:
         - name: KONG_DATABASE
           value: "postgres"
         - name: KONG_PG_HOST
-          value: "postgres-service.default.svc.cluster.local"
+          value: "postgres-service.aks402ns.svc.cluster.local"
         - name: KONG_PG_PORT
           value: "5432"
         - name: KONG_PG_USER
@@ -212,7 +212,7 @@ spec:
         - name: KONG_DATABASE
           value: "postgres"
         - name: KONG_PG_HOST
-          value: "postgres-service.default.svc.cluster.local"
+          value: "postgres-service.aks402ns.svc.cluster.local"
         - name: KONG_PG_PORT
           value: "5432"
         - name: KONG_PG_USER
@@ -279,7 +279,7 @@ data:
     proxy_listen = 0.0.0.0:8000, 0.0.0.0:8443 ssl http2
     admin_listen = 0.0.0.0:8001, 0.0.0.0:8444 ssl
     database = postgres
-    pg_host = postgres-service.default.svc.cluster.local
+    pg_host = postgres-service.aks402ns.svc.cluster.local
     pg_port = 5432
     pg_timeout = 5000
     log_level = info
@@ -309,9 +309,10 @@ metadata:
     app: kong
 ---
 apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
+kind: Role
 metadata:
   name: kong
+  namespace: app-namespace
 rules:
 - apiGroups: [""]
   resources: ["services"]
@@ -330,12 +331,13 @@ rules:
   verbs: ["get", "list", "watch"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRoleBinding
+kind: RoleBinding
 metadata:
   name: kong
+  namespace: app-namespace
 roleRef:
   apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
+  kind: Role
   name: kong
 subjects:
 - kind: ServiceAccount
