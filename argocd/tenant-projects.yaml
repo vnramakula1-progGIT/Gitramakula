@@ -1,0 +1,33 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: tenant-app-namespace
+  namespace: argocd
+spec:
+  description: Tenant project restricted to the existing app-namespace.
+  sourceRepos:
+    - https://github.com/vnramakula1-progGIT/Gitramakula.git
+  destinations:
+    - server: https://kubernetes.default.svc
+      namespace: app-namespace
+  namespaceResourceWhitelist:
+    - group: '*'
+      kind: '*'
+  clusterResourceWhitelist: []
+---
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: tenant-aks402ns
+  namespace: argocd
+spec:
+  description: Tenant project restricted to the existing aks402ns namespace.
+  sourceRepos:
+    - https://github.com/vnramakula1-progGIT/Gitramakula.git
+  destinations:
+    - server: https://kubernetes.default.svc
+      namespace: aks402ns
+  namespaceResourceWhitelist:
+    - group: '*'
+      kind: '*'
+  clusterResourceWhitelist: []
